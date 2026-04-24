@@ -1,8 +1,10 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Observable, throwError } from 'rxjs';
+import { catchError, map } from 'rxjs/operators';
 
 export interface Familiar {
-  id: string;
+  id: number;
   nombre: string;
   apellido: string;
   email: string;
@@ -19,91 +21,60 @@ export interface Familiar {
   providedIn: 'root'
 })
 export class FamiliaService {
-  private familiares$ = new BehaviorSubject<Familiar[]>([]);
-  private localStorageKey = 'apifamilia_familiares';
-  private isLocalStorageAvailable = typeof window !== 'undefined' && !!localStorage;
 
-  constructor() {
-    if (this.isLocalStorageAvailable) {
-      this.cargarFamiliares();
-    }
-  }
+  private apiUrl = 'http://localhost:8080/api/miembros';
 
-  private cargarFamiliares() {
-    if (!this.isLocalStorageAvailable) {
-      return;
-    }
+  constructor(private http: HttpClient) {}
 
-    try {
-      const datos = localStorage.getItem(this.localStorageKey);
-      if (datos) {
-        this.familiares$.next(JSON.parse(datos));
-      }
-    } catch (error) {
-      console.error('Error al cargar familiares:', error);
-    }
-  }
-
+  // ── Obtener todos ──────────────────────────────────────────
   obtenerFamiliares(): Observable<Familiar[]> {
-    return this.familiares$.asObservable();
+    return this.http.get<Familiar[]>(this.apiUrl).pipe(
+      map(familiares => familiares.map(f => ({
+        ...f,
+        edad: this.calcularEdad(f.fechaNacimiento)
+      }))),
+      catchError(this.manejarError)
+    );
   }
 
-  obtenerFamiliarePorId(id: string): Familiar | undefined {
-    return this.familiares$.value.find(f => f.id === id);
+  // ── Obtener por ID ─────────────────────────────────────────
+  obtenerFamiliarPorId(id: number): Observable<Familiar> {
+    return this.http.get<Familiar>(`${this.apiUrl}/${id}`).pipe(
+      catchError(this.manejarError)
+    );
   }
 
-  agregarFamiliar(familiar: Omit<Familiar, 'id'>): Familiar {
-    const nuevoFamiliar: Familiar = {
-      ...familiar,
-      id: Date.now().toString(),
-      edad: this.calcularEdad(familiar.fechaNacimiento)
-    };
-
-    const familiares = [...this.familiares$.value, nuevoFamiliar];
-    this.familiares$.next(familiares);
-    this.guardarEnLocal(familiares);
-
-    return nuevoFamiliar;
+  // ── Crear ──────────────────────────────────────────────────
+  agregarFamiliar(familiar: Omit<Familiar, 'id' | 'edad'>): Observable<Familiar> {
+    return this.http.post<Familiar>(this.apiUrl, familiar).pipe(
+      catchError(this.manejarError)
+    );
   }
 
-  actualizarFamiliar(id: string, familiar: Omit<Familiar, 'id'>): Familiar | null {
-    const familiares = this.familiares$.value.map(f => {
-      if (f.id === id) {
-        return {
-          ...familiar,
-          id,
-          edad: this.calcularEdad(familiar.fechaNacimiento)
-        };
-      }
-      return f;
-    });
-
-    this.familiares$.next(familiares);
-    this.guardarEnLocal(familiares);
-
-    return this.obtenerFamiliarePorId(id) || null;
+  // ── Actualizar ─────────────────────────────────────────────
+  actualizarFamiliar(id: number, familiar: Omit<Familiar, 'id' | 'edad'>): Observable<Familiar> {
+    return this.http.put<Familiar>(`${this.apiUrl}/${id}`, familiar).pipe(
+      catchError(this.manejarError)
+    );
   }
 
-  eliminarFamiliar(id: string): boolean {
-    const familiares = this.familiares$.value.filter(f => f.id !== id);
-    this.familiares$.next(familiares);
-    this.guardarEnLocal(familiares);
-    return true;
+  // ── Eliminar ───────────────────────────────────────────────
+  eliminarFamiliar(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${id}`).pipe(
+      catchError(this.manejarError)
+    );
   }
 
-  private guardarEnLocal(familiares: Familiar[]) {
-    if (!this.isLocalStorageAvailable) {
-      return;
-    }
-
-    try {
-      localStorage.setItem(this.localStorageKey, JSON.stringify(familiares));
-    } catch (error) {
-      console.error('Error al guardar familiares:', error);
-    }
+  // ── Buscar ─────────────────────────────────────────────────
+  buscarFamiliares(query: string): Observable<Familiar[]> {
+    return this.http.get<Familiar[]>(`${this.apiUrl}/buscar?q=${query}`).pipe(
+      catchError(this.manejarError)
+    );
   }
 
-  private calcularEdad(fechaNacimiento: string): number {
+  // ── Calcular edad ──────────────────────────────────────────
+  calcularEdad(fechaNacimiento: string): number {
+    if (!fechaNacimiento) return 0;
     const hoy = new Date();
     const fecha = new Date(fechaNacimiento);
     let edad = hoy.getFullYear() - fecha.getFullYear();
@@ -112,5 +83,18 @@ export class FamiliaService {
       edad--;
     }
     return edad;
+  }
+
+  // ── Manejo de errores ──────────────────────────────────────
+  private manejarError(error: HttpErrorResponse) {
+    let mensaje = 'Ocurrió un error inesperado';
+    if (error.status === 0) {
+      mensaje = 'No se pudo conectar con el servidor. ¿Está corriendo Spring Boot?';
+    } else if (error.status === 404) {
+      mensaje = 'Miembro no encontrado';
+    } else if (error.status === 409 || error.status === 400) {
+      mensaje = error.error?.mensaje || error.error?.error || 'Datos inválidos';
+    }
+    return throwError(() => new Error(mensaje));
   }
 }

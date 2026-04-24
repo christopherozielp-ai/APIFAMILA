@@ -3,7 +3,7 @@
   <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
     <div class="container-fluid">
       <a class="navbar-brand" href="#">
-        <i class="fas fa-family me-2"></i>API Familia
+        <i class="fas fa-home me-2"></i>API Familia
       </a>
       <div class="ms-auto d-flex align-items-center gap-3">
         <span class="text-white">Bienvenido, {{ usuarioNombre }}</span>
@@ -16,6 +16,16 @@
 
   <!-- Contenido Principal -->
   <div class="container mt-5">
+
+    <!-- Mensajes de éxito / error globales -->
+    <div class="alert alert-success alert-dismissible" *ngIf="mensajeExito">
+      <i class="fas fa-check-circle me-2"></i>{{ mensajeExito }}
+    </div>
+    <div class="alert alert-danger alert-dismissible" *ngIf="mensajeError && !mostrarFormulario">
+      <i class="fas fa-exclamation-circle me-2"></i>{{ mensajeError }}
+      <button type="button" class="btn-close" (click)="mensajeError = null"></button>
+    </div>
+
     <div class="row mb-4">
       <div class="col-md-8">
         <h1 class="mb-0">
@@ -41,6 +51,12 @@
         </h5>
       </div>
       <div class="card-body">
+
+        <!-- Error dentro del formulario -->
+        <div class="alert alert-danger" *ngIf="mensajeError">
+          <i class="fas fa-exclamation-circle me-2"></i>{{ mensajeError }}
+        </div>
+
         <form [formGroup]="formularioFamiliar" (ngSubmit)="guardarFamiliar()">
           <div class="row">
             <div class="col-md-6 mb-3">
@@ -51,9 +67,7 @@
                 formControlName="nombre"
                 [class.is-invalid]="formularioFamiliar.get('nombre')?.invalid && formularioFamiliar.get('nombre')?.touched"
               >
-              <div class="invalid-feedback" *ngIf="formularioFamiliar.get('nombre')?.invalid && formularioFamiliar.get('nombre')?.touched">
-                El nombre es requerido
-              </div>
+              <div class="invalid-feedback">El nombre es requerido</div>
             </div>
             <div class="col-md-6 mb-3">
               <label class="form-label">Apellido *</label>
@@ -63,9 +77,7 @@
                 formControlName="apellido"
                 [class.is-invalid]="formularioFamiliar.get('apellido')?.invalid && formularioFamiliar.get('apellido')?.touched"
               >
-              <div class="invalid-feedback" *ngIf="formularioFamiliar.get('apellido')?.invalid && formularioFamiliar.get('apellido')?.touched">
-                El apellido es requerido
-              </div>
+              <div class="invalid-feedback">El apellido es requerido</div>
             </div>
           </div>
 
@@ -78,9 +90,7 @@
                 formControlName="email"
                 [class.is-invalid]="formularioFamiliar.get('email')?.invalid && formularioFamiliar.get('email')?.touched"
               >
-              <div class="invalid-feedback" *ngIf="formularioFamiliar.get('email')?.invalid && formularioFamiliar.get('email')?.touched">
-                Email válido es requerido
-              </div>
+              <div class="invalid-feedback">Email válido es requerido</div>
             </div>
             <div class="col-md-6 mb-3">
               <label class="form-label">Teléfono *</label>
@@ -90,9 +100,7 @@
                 formControlName="telefono"
                 [class.is-invalid]="formularioFamiliar.get('telefono')?.invalid && formularioFamiliar.get('telefono')?.touched"
               >
-              <div class="invalid-feedback" *ngIf="formularioFamiliar.get('telefono')?.invalid && formularioFamiliar.get('telefono')?.touched">
-                El teléfono es requerido
-              </div>
+              <div class="invalid-feedback">El teléfono es requerido</div>
             </div>
           </div>
 
@@ -107,9 +115,7 @@
                 <option value="">Selecciona una relación</option>
                 <option *ngFor="let rel of relaciones" [value]="rel">{{ rel }}</option>
               </select>
-              <div class="invalid-feedback" *ngIf="formularioFamiliar.get('relacion')?.invalid && formularioFamiliar.get('relacion')?.touched">
-                La relación es requerida
-              </div>
+              <div class="invalid-feedback">La relación es requerida</div>
             </div>
             <div class="col-md-6 mb-3">
               <label class="form-label">Fecha de Nacimiento *</label>
@@ -119,9 +125,7 @@
                 formControlName="fechaNacimiento"
                 [class.is-invalid]="formularioFamiliar.get('fechaNacimiento')?.invalid && formularioFamiliar.get('fechaNacimiento')?.touched"
               >
-              <div class="invalid-feedback" *ngIf="formularioFamiliar.get('fechaNacimiento')?.invalid && formularioFamiliar.get('fechaNacimiento')?.touched">
-                La fecha de nacimiento es requerida
-              </div>
+              <div class="invalid-feedback">La fecha de nacimiento es requerida</div>
             </div>
           </div>
 
@@ -133,9 +137,7 @@
               formControlName="direccion"
               [class.is-invalid]="formularioFamiliar.get('direccion')?.invalid && formularioFamiliar.get('direccion')?.touched"
             >
-            <div class="invalid-feedback" *ngIf="formularioFamiliar.get('direccion')?.invalid && formularioFamiliar.get('direccion')?.touched">
-              La dirección es requerida
-            </div>
+            <div class="invalid-feedback">La dirección es requerida</div>
           </div>
 
           <div class="row">
@@ -147,9 +149,7 @@
                 formControlName="ciudad"
                 [class.is-invalid]="formularioFamiliar.get('ciudad')?.invalid && formularioFamiliar.get('ciudad')?.touched"
               >
-              <div class="invalid-feedback" *ngIf="formularioFamiliar.get('ciudad')?.invalid && formularioFamiliar.get('ciudad')?.touched">
-                La ciudad es requerida
-              </div>
+              <div class="invalid-feedback">La ciudad es requerida</div>
             </div>
             <div class="col-md-6 mb-3">
               <label class="form-label">País *</label>
@@ -159,21 +159,20 @@
                 formControlName="pais"
                 [class.is-invalid]="formularioFamiliar.get('pais')?.invalid && formularioFamiliar.get('pais')?.touched"
               >
-              <div class="invalid-feedback" *ngIf="formularioFamiliar.get('pais')?.invalid && formularioFamiliar.get('pais')?.touched">
-                El país es requerido
-              </div>
+              <div class="invalid-feedback">El país es requerido</div>
             </div>
           </div>
 
           <div class="d-flex gap-2 justify-content-end">
-            <button type="button" class="btn btn-secondary" (click)="cerrarFormulario()">
+            <button type="button" class="btn btn-secondary" (click)="cerrarFormulario()" [disabled]="cargando">
               Cancelar
             </button>
             <button
               type="submit"
               class="btn btn-primary"
-              [disabled]="formularioFamiliar.invalid"
+              [disabled]="formularioFamiliar.invalid || cargando"
             >
+              <span *ngIf="cargando" class="spinner-border spinner-border-sm me-2"></span>
               {{ editandoId ? 'Actualizar' : 'Guardar' }}
             </button>
           </div>
@@ -181,8 +180,14 @@
       </div>
     </div>
 
+    <!-- Cargando lista -->
+    <div class="text-center my-5" *ngIf="cargando && !mostrarFormulario">
+      <div class="spinner-border text-primary" role="status"></div>
+      <p class="mt-2 text-muted">Cargando miembros...</p>
+    </div>
+
     <!-- Lista de Familiares -->
-    <div class="row" *ngIf="familiares.length > 0 && !mostrarFormulario">
+    <div class="row" *ngIf="familiares.length > 0 && !mostrarFormulario && !cargando">
       <div class="col-md-12">
         <h5 class="mb-3">Total de Miembros: {{ familiares.length }}</h5>
       </div>
@@ -231,9 +236,10 @@
     </div>
 
     <!-- Sin Familiares -->
-    <div class="alert alert-info text-center" *ngIf="familiares.length === 0 && !mostrarFormulario">
+    <div class="alert alert-info text-center" *ngIf="familiares.length === 0 && !mostrarFormulario && !cargando">
       <i class="fas fa-info-circle me-2"></i>
       No hay miembros registrados. ¡Comienza agregando tu primer miembro!
     </div>
+
   </div>
 </div>

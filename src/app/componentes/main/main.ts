@@ -14,9 +14,12 @@ export class Main implements OnInit {
   familiares: Familiar[] = [];
   formularioFamiliar: FormGroup;
   mostrarFormulario = false;
-  editandoId: string | null = null;
+  editandoId: number | null = null;
   usuarioNombre: string = '';
-  
+  cargando = false;
+  mensajeError: string | null = null;
+  mensajeExito: string | null = null;
+
   relaciones = ['Padre', 'Madre', 'Hermano', 'Hermana', 'Hijo', 'Hija', 'Abuelo', 'Abuela', 'Tío', 'Tía', 'Primo', 'Prima', 'Cónyuge', 'Otro'];
 
   constructor(
@@ -25,15 +28,15 @@ export class Main implements OnInit {
     private fb: FormBuilder
   ) {
     this.formularioFamiliar = this.fb.group({
-      nombre: ['', Validators.required],
-      apellido: ['', Validators.required],
-      email: ['', [Validators.required, Validators.email]],
-      telefono: ['', Validators.required],
-      relacion: ['', Validators.required],
+      nombre:          ['', Validators.required],
+      apellido:        ['', Validators.required],
+      email:           ['', [Validators.required, Validators.email]],
+      telefono:        ['', Validators.required],
+      relacion:        ['', Validators.required],
       fechaNacimiento: ['', Validators.required],
-      direccion: ['', Validators.required],
-      ciudad: ['', Validators.required],
-      pais: ['', Validators.required]
+      direccion:       ['', Validators.required],
+      ciudad:          ['', Validators.required],
+      pais:            ['', Validators.required]
     });
   }
 
@@ -42,12 +45,108 @@ export class Main implements OnInit {
     this.obtenerPerfil();
   }
 
+  // ── Cargar lista ───────────────────────────────────────────
   cargarFamiliares() {
-    this.familiaService.obtenerFamiliares().subscribe(familiares => {
-      this.familiares = familiares;
+    this.cargando = true;
+    this.mensajeError = null;
+    this.familiaService.obtenerFamiliares().subscribe({
+      next: (familiares) => {
+        this.familiares = familiares;
+        this.cargando = false;
+      },
+      error: (err) => {
+        this.mensajeError = err.message;
+        this.cargando = false;
+      }
     });
   }
 
+  // ── Guardar (crear o actualizar) ───────────────────────────
+  guardarFamiliar() {
+    if (this.formularioFamiliar.invalid) return;
+
+    const datos = this.formularioFamiliar.value;
+    this.cargando = true;
+    this.mensajeError = null;
+
+    if (this.editandoId !== null) {
+      // ACTUALIZAR
+      this.familiaService.actualizarFamiliar(this.editandoId, datos).subscribe({
+        next: () => {
+          this.mostrarExito('Miembro actualizado correctamente');
+          this.cerrarFormulario();
+          this.cargarFamiliares();
+        },
+        error: (err) => {
+          this.mensajeError = err.message;
+          this.cargando = false;
+        }
+      });
+    } else {
+      // CREAR
+      this.familiaService.agregarFamiliar(datos).subscribe({
+        next: () => {
+          this.mostrarExito('Miembro agregado correctamente');
+          this.cerrarFormulario();
+          this.cargarFamiliares();
+        },
+        error: (err) => {
+          this.mensajeError = err.message;
+          this.cargando = false;
+        }
+      });
+    }
+  }
+
+  // ── Editar ─────────────────────────────────────────────────
+  editarFamiliar(familiar: Familiar) {
+    this.editandoId = familiar.id;
+    this.formularioFamiliar.patchValue({
+      nombre:          familiar.nombre,
+      apellido:        familiar.apellido,
+      email:           familiar.email,
+      telefono:        familiar.telefono,
+      relacion:        familiar.relacion,
+      fechaNacimiento: familiar.fechaNacimiento,
+      direccion:       familiar.direccion,
+      ciudad:          familiar.ciudad,
+      pais:            familiar.pais
+    });
+    this.mostrarFormulario = true;
+    this.mensajeError = null;
+  }
+
+  // ── Eliminar ───────────────────────────────────────────────
+  eliminarFamiliar(id: number) {
+    if (!confirm('¿Estás seguro de que deseas eliminar este miembro de la familia?')) return;
+
+    this.familiaService.eliminarFamiliar(id).subscribe({
+      next: () => {
+        this.mostrarExito('Miembro eliminado correctamente');
+        this.cargarFamiliares();
+      },
+      error: (err) => {
+        this.mensajeError = err.message;
+      }
+    });
+  }
+
+  // ── Formulario ─────────────────────────────────────────────
+  abrirFormulario() {
+    this.mostrarFormulario = true;
+    this.editandoId = null;
+    this.formularioFamiliar.reset();
+    this.mensajeError = null;
+  }
+
+  cerrarFormulario() {
+    this.mostrarFormulario = false;
+    this.editandoId = null;
+    this.formularioFamiliar.reset();
+    this.mensajeError = null;
+  }
+
+  // ── Perfil usuario ─────────────────────────────────────────
   obtenerPerfil() {
     try {
       const perfil = this.authGoogle.getperfil();
@@ -59,48 +158,14 @@ export class Main implements OnInit {
     }
   }
 
-  abrirFormulario() {
-    this.mostrarFormulario = true;
-    this.editandoId = null;
-    this.formularioFamiliar.reset();
-  }
-
-  cerrarFormulario() {
-    this.mostrarFormulario = false;
-    this.editandoId = null;
-    this.formularioFamiliar.reset();
-  }
-
-  guardarFamiliar() {
-    if (this.formularioFamiliar.valid) {
-      const datos = this.formularioFamiliar.value;
-      
-      if (this.editandoId) {
-        this.familiaService.actualizarFamiliar(this.editandoId, datos);
-      } else {
-        this.familiaService.agregarFamiliar(datos);
-      }
-      
-      this.cerrarFormulario();
-      this.cargarFamiliares();
-    }
-  }
-
-  editarFamiliar(familiar: Familiar) {
-    this.editandoId = familiar.id;
-    this.formularioFamiliar.patchValue(familiar);
-    this.mostrarFormulario = true;
-  }
-
-  eliminarFamiliar(id: string) {
-    if (confirm('¿Estás seguro de que deseas eliminar este miembro de la familia?')) {
-      this.familiaService.eliminarFamiliar(id);
-      this.cargarFamiliares();
-    }
-  }
-
   cerrarSesion() {
     this.authGoogle.logout();
     window.location.href = '/login';
+  }
+
+  // ── Mensajes ───────────────────────────────────────────────
+  private mostrarExito(mensaje: string) {
+    this.mensajeExito = mensaje;
+    setTimeout(() => this.mensajeExito = null, 3000);
   }
 }
