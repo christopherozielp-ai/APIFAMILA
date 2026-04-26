@@ -22,7 +22,7 @@ export interface Familiar {
 })
 export class FamiliaService {
 
-  private apiUrl = 'http://localhost:8080/api/miembros';
+  private apiUrl = 'https://apifamilia-backend.onrender.com/api/miembros';
 
   constructor(private http: HttpClient) {}
 
